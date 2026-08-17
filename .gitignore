@@ -1,0 +1,4 @@
+/vendor/
+/.env
+/storage/homework/*
+!/storage/homework/.gitkeep
