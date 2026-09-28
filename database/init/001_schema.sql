@@ -16,6 +16,36 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_users_role_deleted (role, deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS recurring_lessons (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    teacher_id BIGINT UNSIGNED NOT NULL,
+    student_id BIGINT UNSIGNED NOT NULL,
+
+    weekday TINYINT NOT NULL,
+    start_time TIME NOT NULL,
+
+    duration_minutes INT NOT NULL DEFAULT 60,
+
+    active TINYINT(1) NOT NULL DEFAULT 1,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_recurring_teacher
+        FOREIGN KEY (teacher_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_recurring_student
+        FOREIGN KEY (student_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    INDEX idx_recurring_student (student_id),
+    INDEX idx_recurring_teacher (teacher_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 
 CREATE TABLE IF NOT EXISTS lessons (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

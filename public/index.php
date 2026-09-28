@@ -47,11 +47,22 @@ $router->get('/teacher/students/{id}/edit', [StudentManagementController::class,
 $router->post('/teacher/students/{id}/edit', [StudentManagementController::class, 'update']);
 $router->post('/teacher/students/{id}/delete', [StudentManagementController::class, 'delete']);
 $router->post('/teacher/students/{id}/notes', [StudentManagementController::class, 'addNote']);
+$router->post( '/teacher/students/{id}/schedule', [StudentManagementController::class, 'addSchedule']);
 
 $router->get('/teacher/schedule', [ScheduleController::class, 'teacher']);
-$router->post('/teacher/schedule/slots', [ScheduleController::class, 'createSlot']);
-$router->post('/teacher/schedule/slots/{id}/delete', [ScheduleController::class, 'deleteSlot']);
 
+$router->post(
+    '/teacher/schedule/lessons',
+    [ScheduleController::class, 'createLesson']
+);
+$router->post(
+    '/teacher/students/{id}/schedule',
+    [StudentManagementController::class, 'addSchedule']
+);
+$router->post(
+    '/teacher/students/{id}/schedule/delete',
+    [StudentManagementController::class, 'deleteSchedule']
+);
 $router->get('/teacher/lessons/{id}', [LessonController::class, 'teacherShow']);
 $router->post('/teacher/lessons/{id}/update', [LessonController::class, 'teacherUpdate']);
 $router->post('/teacher/lessons/{id}/cancel', [LessonController::class, 'teacherCancel']);

@@ -57,7 +57,23 @@ final class Lesson
         $stmt->execute([$teacherId]);
         return $stmt->fetchAll();
     }
+public static function scheduleForTeacher(int $teacherId, int $days = 60): array
+{
+    $stmt = Database::connection()->prepare(
+        "SELECT l.*, u.first_name, u.last_name
+         FROM lessons l
+         JOIN users u ON u.id = l.student_id
+         WHERE l.teacher_id = ?
+           AND l.status = 'scheduled'
+           AND l.starts_at >= NOW() - INTERVAL 1 DAY
+           AND l.starts_at < NOW() + INTERVAL " . (int)$days . " DAY
+         ORDER BY l.starts_at ASC"
+    );
 
+    $stmt->execute([$teacherId]);
+
+    return $stmt->fetchAll();
+}
     public static function todayForTeacher(int $teacherId): array
     {
         $stmt = Database::connection()->prepare(
@@ -79,7 +95,78 @@ final class Lesson
         $stmt->execute([$teacherId]);
         return (int)$stmt->fetchColumn();
     }
+public static function createByTeacher(
+    int $teacherId,
+    int $studentId,
+    string $startsAt
+): array {
+    $pdo = Database::connection();
 
+    $starts = new DateTimeImmutable($startsAt);
+    $ends = $starts->modify('+60 minutes');
+
+    $studentStmt = $pdo->prepare(
+        "SELECT id
+         FROM users
+         WHERE id = ?
+           AND role = 'student'
+           AND deleted_at IS NULL
+         LIMIT 1"
+    );
+    $studentStmt->execute([$studentId]);
+
+    if (!$studentStmt->fetchColumn()) {
+        throw new \RuntimeException('Ученик не найден.');
+    }
+
+    $check = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM lessons
+         WHERE teacher_id = ?
+           AND status = 'scheduled'
+           AND starts_at < ?
+           AND ends_at > ?"
+    );
+
+    $check->execute([
+        $teacherId,
+        $ends->format('Y-m-d H:i:s'),
+        $starts->format('Y-m-d H:i:s'),
+    ]);
+
+    if ((int)$check->fetchColumn() > 0) {
+        throw new \RuntimeException(
+            'На это время уже назначено другое занятие.'
+        );
+    }
+
+    $stmt = $pdo->prepare(
+        "INSERT INTO lessons
+        (
+            student_id,
+            teacher_id,
+            schedule_slot_id,
+            starts_at,
+            ends_at,
+            status,
+            payment_status,
+            booked_at
+        )
+        VALUES (?, ?, NULL, ?, ?, 'scheduled', 'unpaid', NOW())"
+    );
+
+    $stmt->execute([
+        $studentId,
+        $teacherId,
+        $starts->format('Y-m-d H:i:s'),
+        $ends->format('Y-m-d H:i:s'),
+    ]);
+
+    $lessonId = (int)$pdo->lastInsertId();
+
+    return self::find($lessonId)
+        ?? throw new \RuntimeException('Не удалось создать занятие.');
+}
     public static function book(int $studentId, int $slotId): array
     {
         $pdo = Database::connection();

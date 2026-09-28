@@ -12,6 +12,8 @@ use App\Models\Lesson;
 use App\Models\TeacherNote;
 use App\Models\User;
 use PDOException;
+use App\Models\RecurringLesson;
+
 
 final class StudentManagementController extends Controller
 {
@@ -66,6 +68,8 @@ final class StudentManagementController extends Controller
             'student' => $student,
             'lessons' => Lesson::forStudent((int)$student['id']),
             'notes' => TeacherNote::forStudent((int)$student['id']),
+            'schedule' => RecurringLesson::forStudent((int)$student['id']),
+            'schedule' => RecurringLesson::forStudent((int)$student['id'])
         ]);
     }
 
@@ -147,6 +151,78 @@ final class StudentManagementController extends Controller
             '_require_password' => $requirePassword,
         ];
     }
+    public function addSchedule(string $id): void
+{
+    Auth::requireRole('teacher');
+    Csrf::guard();
+
+    $studentId = (int)$id;
+    $teacher = Auth::user();
+
+    $weekday = (int)($_POST['weekday'] ?? 0);
+    $time = trim((string)($_POST['time'] ?? ''));
+
+
+    if (
+        $weekday < 1 ||
+        $weekday > 7 ||
+        $time === ''
+    ) {
+
+        Flash::set(
+            'error',
+            'Выберите день и время.'
+        );
+
+        $this->redirect(
+            '/teacher/students/' . $studentId
+        );
+    }
+
+
+    RecurringLesson::create(
+        (int)$teacher['id'],
+        $studentId,
+        $weekday,
+        $time
+    );
+
+
+    Flash::set(
+        'success',
+        'Постоянное расписание добавлено.'
+    );
+
+
+    $this->redirect(
+        '/teacher/students/' . $studentId
+    );
+}
+public function deleteSchedule(string $id): void
+{
+    Auth::requireRole('teacher');
+    Csrf::guard();
+
+    $studentId = (int)$id;
+
+    $scheduleId = (int)($_POST['schedule_id'] ?? 0);
+
+    if ($scheduleId) {
+        RecurringLesson::delete(
+            $scheduleId,
+            $studentId
+        );
+
+        Flash::set(
+            'success',
+            'Занятие из постоянного расписания удалено.'
+        );
+    }
+
+    $this->redirect(
+        '/teacher/students/' . $studentId
+    );
+}
 
     private function validateStudent(array $data, bool $requirePassword, ?int $exceptId = null): ?string
     {

@@ -31,6 +31,88 @@
     </section>
 </div>
 <section class="panel space-top">
+
+    <div class="panel-head">
+        <h2>Постоянное расписание</h2>
+    </div>
+
+    <?php if (!$schedule): ?>
+
+        <p class="empty">
+            Постоянное расписание пока не задано.
+        </p>
+
+    <?php else: ?>
+
+        <div class="schedule-list">
+
+            <?php foreach ($schedule as $item): ?>
+
+                <div class="schedule-row">
+
+                    <div class="schedule-time">
+
+                        <?php
+                        $days = [
+                            1 => 'Понедельник',
+                            2 => 'Вторник',
+                            3 => 'Среда',
+                            4 => 'Четверг',
+                            5 => 'Пятница',
+                            6 => 'Суббота',
+                            7 => 'Воскресенье'
+                        ];
+                        ?>
+
+                        <strong>
+                            <?= $days[(int)$item['weekday']] ?? '' ?>
+                        </strong>
+
+                    </div>
+
+                    <div class="schedule-info">
+
+                        <strong>
+                            <?= e(substr($item['start_time'],0,5)) ?>
+                        </strong>
+
+                        <small>
+                            Каждую неделю
+                        </small>
+
+                    </div>
+<form
+    method="post"
+    action="/teacher/students/<?= (int)$student['id'] ?>/schedule/delete"
+    onsubmit="return confirm('Удалить это постоянное занятие?');"
+>
+
+    <?= csrf_field() ?>
+
+    <input
+        type="hidden"
+        name="schedule_id"
+        value="<?= (int)$item['id'] ?>"
+    >
+
+    <button
+        class="icon-button"
+        type="submit"
+    >
+        ×
+    </button>
+
+</form>
+                </div>
+
+            <?php endforeach; ?>
+
+        </div>
+
+    <?php endif; ?>
+
+</section>
+<section class="panel space-top">
     <div class="panel-head"><h2>История занятий</h2></div>
     <div class="table-wrap"><table><thead><tr><th>Дата</th><th>Статус</th><th>Оплата</th><th></th></tr></thead><tbody>
     <?php foreach ($lessons as $lesson): ?><tr><td><?= date('d.m.Y H:i', strtotime($lesson['starts_at'])) ?></td><td><span class="status status-<?= e($lesson['status']) ?>"><?= e(match($lesson['status']) {'scheduled'=>'Запланировано','completed'=>'Проведено','student_cancelled'=>'Отменено учеником','teacher_cancelled'=>'Отменено учителем',default=>$lesson['status']}) ?></span></td><td><?= $lesson['payment_status'] === 'paid' ? 'Оплачено' : 'Не оплачено' ?></td><td><a href="/teacher/lessons/<?= (int)$lesson['id'] ?>">Открыть →</a></td></tr><?php endforeach; ?>

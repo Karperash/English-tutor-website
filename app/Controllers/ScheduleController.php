@@ -9,8 +9,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Flash;
 use App\Models\Lesson;
-use App\Models\ScheduleSlot;
-use App\Models\StudentAvailability;
+use App\Models\User;
 use App\Services\NotificationService;
 use DateTimeImmutable;
 use PDOException;
@@ -18,49 +17,63 @@ use PDOException;
 final class ScheduleController extends Controller
 {
     public function teacher(): void
-    {
-        $teacher = Auth::requireRole('teacher');
-        $slots = ScheduleSlot::teacherUpcoming((int)$teacher['id']);
-        foreach ($slots as &$slot) {
-            $slot['availability_names'] = ScheduleSlot::availabilityNames((int)$slot['id']);
-        }
-        unset($slot);
-        $this->view('teacher/schedule', ['slots' => $slots]);
-    }
+{
+    $teacher = Auth::requireRole('teacher');
 
-    public function createSlot(): void
-    {
-        $teacher = Auth::requireRole('teacher');
-        Csrf::guard();
-        $date = $this->input('date');
-        $time = $this->input('time');
+    $lessons = Lesson::scheduleForTeacher((int)$teacher['id']);
+    $students = User::students();
 
-        $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
-        if (!$dt || $dt <= new DateTimeImmutable()) {
-            Flash::set('error', 'Укажите корректные будущие дату и время.');
-            $this->redirect('/teacher/schedule');
-        }
+    $this->view('teacher/schedule', [
+        'lessons' => $lessons,
+        'students' => $students,
+    ]);
+}
+public function createLesson(): void
+{
+    $teacher = Auth::requireRole('teacher');
+    Csrf::guard();
 
-        try {
-            ScheduleSlot::create((int)$teacher['id'], $dt->format('Y-m-d H:i:s'));
-            Flash::set('success', 'Свободное время добавлено.');
-        } catch (\Throwable $e) {
-            Flash::set('error', $e instanceof PDOException ? 'Такой временной слот уже существует.' : $e->getMessage());
-        }
+    $studentId = (int)$this->input('student_id');
+    $date = $this->input('date');
+    $time = $this->input('time');
+
+    $dt = DateTimeImmutable::createFromFormat(
+        'Y-m-d H:i',
+        $date . ' ' . $time
+    );
+
+    if (!$studentId || !$dt || $dt <= new DateTimeImmutable()) {
+        Flash::set(
+            'error',
+            'Выберите ученика и укажите корректные будущие дату и время.'
+        );
+
         $this->redirect('/teacher/schedule');
     }
 
-    public function deleteSlot(string $id): void
-    {
-        $teacher = Auth::requireRole('teacher');
-        Csrf::guard();
-        if (ScheduleSlot::deleteIfFree((int)$id, (int)$teacher['id'])) {
-            Flash::set('success', 'Свободное время удалено.');
-        } else {
-            Flash::set('error', 'Нельзя удалить занятый слот. Сначала отмените или перенесите занятие.');
-        }
-        $this->redirect('/teacher/schedule');
+    try {
+        $lesson = Lesson::createByTeacher(
+            (int)$teacher['id'],
+            $studentId,
+            $dt->format('Y-m-d H:i:s')
+        );
+
+        NotificationService::notifyUser(
+            $studentId,
+            'lesson_created',
+            'Преподаватель назначил вам занятие на '
+            . date('d.m.Y H:i', strtotime((string)$lesson['starts_at']))
+            . '.',
+            '/student/lessons/' . $lesson['id']
+        );
+
+        Flash::set('success', 'Занятие назначено.');
+    } catch (\Throwable $e) {
+        Flash::set('error', $e->getMessage());
     }
+
+    $this->redirect('/teacher/schedule');
+}
 
     public function student(): void
     {
