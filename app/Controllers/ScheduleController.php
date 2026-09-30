@@ -23,7 +23,7 @@ final class ScheduleController extends Controller
 
     $lessons = Lesson::scheduleForTeacher(
         (int)$teacher['id'],
-        60
+        31
     );
 
     $recurringLessons = RecurringLesson::upcomingForTeacher(

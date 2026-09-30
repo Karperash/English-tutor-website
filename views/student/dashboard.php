@@ -17,9 +17,7 @@
         <a class="text-link-light" href="/student/lessons/<?= (int)$nextLesson['id'] ?>">Подробнее →</a>
     </div>
 </section>
-<?php else: ?>
-<section class="panel"><p class="empty">У вас пока нет будущих занятий. <a href="/student/schedule">Выбрать время →</a></p></section>
-<?php endif; ?>
+
 
 <div class="content-grid content-grid-2 space-top">
     <section class="panel">

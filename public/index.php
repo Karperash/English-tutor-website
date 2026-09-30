@@ -74,9 +74,6 @@ $router->get('/teacher/homework/{id}', [HomeworkController::class, 'teacherShow'
 $router->post('/teacher/homework/{id}/check', [HomeworkController::class, 'teacherCheck']);
 
 $router->get('/student', [StudentController::class, 'dashboard']);
-$router->get('/student/schedule', [ScheduleController::class, 'student']);
-$router->post('/student/schedule/{id}/book', [ScheduleController::class, 'book']);
-$router->post('/student/schedule/{id}/availability', [ScheduleController::class, 'toggleAvailability']);
 $router->get('/student/lessons', [LessonController::class, 'studentIndex']);
 $router->get('/student/lessons/{id}', [LessonController::class, 'studentShow']);
 $router->post('/student/lessons/{id}/cancel', [LessonController::class, 'studentCancel']);

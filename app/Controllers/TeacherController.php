@@ -15,7 +15,7 @@ final class TeacherController extends Controller
     {
         $teacher = Auth::requireRole('teacher');
         $today = Lesson::todayForTeacher((int)$teacher['id']);
-        $upcoming = Lesson::upcomingForTeacher((int)$teacher['id'], 6);
+        $upcoming = Lesson::upcomingForTeacher((int)$teacher['id'], 100);
 
         $this->view('teacher/dashboard', [
             'todayLessons' => $today,
