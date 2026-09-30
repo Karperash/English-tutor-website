@@ -1,7 +1,7 @@
 <?php $title = 'Главная'; ?>
 <div class="page-head">
     <div><span class="eyebrow">Кабинет преподавателя</span><h1>Добро пожаловать, <?= e($user['first_name']) ?>!</h1></div>
-    <a class="button" href="/teacher/schedule">+ Добавить время</a>
+    <a class="button" href="/teacher/schedule">Расписание</a>
 </div>
 
 <div class="stats-grid">
@@ -27,7 +27,7 @@
     </section>
 
     <section class="panel">
-        <div class="panel-head"><h2>Ближайшие занятия</h2><a href="/teacher/students">Ученики</a></div>
+        <div class="panel-head"><h2>Занятия на ближайший месяц</h2><a href="/teacher/schedule">Расписание</a></div>
         <?php if (!$upcomingLessons): ?><p class="empty">Ближайших занятий пока нет.</p><?php endif; ?>
         <div class="list">
             <?php foreach ($upcomingLessons as $lesson): ?>

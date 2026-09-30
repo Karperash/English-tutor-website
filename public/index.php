@@ -47,18 +47,18 @@ $router->get('/teacher/students/{id}/edit', [StudentManagementController::class,
 $router->post('/teacher/students/{id}/edit', [StudentManagementController::class, 'update']);
 $router->post('/teacher/students/{id}/delete', [StudentManagementController::class, 'delete']);
 $router->post('/teacher/students/{id}/notes', [StudentManagementController::class, 'addNote']);
-$router->post( '/teacher/students/{id}/schedule', [StudentManagementController::class, 'addSchedule']);
-
 $router->get('/teacher/schedule', [ScheduleController::class, 'teacher']);
 
 $router->post(
     '/teacher/schedule/lessons',
     [ScheduleController::class, 'createLesson']
 );
+
 $router->post(
     '/teacher/students/{id}/schedule',
     [StudentManagementController::class, 'addSchedule']
 );
+
 $router->post(
     '/teacher/students/{id}/schedule/delete',
     [StudentManagementController::class, 'deleteSchedule']

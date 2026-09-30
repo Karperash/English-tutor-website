@@ -26,7 +26,6 @@
                 <a href="/teacher/homework">Домашние задания</a>
             <?php else: ?>
                 <a href="/student">Главная</a>
-                <a href="/student/schedule">Расписание</a>
                 <a href="/student/lessons">Мои занятия</a>
                 <a href="/student/homework">Домашние задания</a>
             <?php endif; ?>

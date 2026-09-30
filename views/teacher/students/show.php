@@ -36,13 +36,19 @@
         <h2>Постоянное расписание</h2>
     </div>
 
-    <?php if (!$schedule): ?>
+    <?php
+    $days = [
+        1 => 'Понедельник',
+        2 => 'Вторник',
+        3 => 'Среда',
+        4 => 'Четверг',
+        5 => 'Пятница',
+        6 => 'Суббота',
+        7 => 'Воскресенье',
+    ];
+    ?>
 
-        <p class="empty">
-            Постоянное расписание пока не задано.
-        </p>
-
-    <?php else: ?>
+    <?php if ($schedule): ?>
 
         <div class="schedule-list">
 
@@ -52,20 +58,8 @@
 
                     <div class="schedule-time">
 
-                        <?php
-                        $days = [
-                            1 => 'Понедельник',
-                            2 => 'Вторник',
-                            3 => 'Среда',
-                            4 => 'Четверг',
-                            5 => 'Пятница',
-                            6 => 'Суббота',
-                            7 => 'Воскресенье'
-                        ];
-                        ?>
-
                         <strong>
-                            <?= $days[(int)$item['weekday']] ?? '' ?>
+                            <?= e($days[(int)$item['weekday']] ?? '') ?>
                         </strong>
 
                     </div>
@@ -73,43 +67,138 @@
                     <div class="schedule-info">
 
                         <strong>
-                            <?= e(substr($item['start_time'],0,5)) ?>
+                            <?= e(substr($item['start_time'], 0, 5)) ?>
                         </strong>
 
                         <small>
-                            Каждую неделю
+                            Каждую неделю · 60 минут
                         </small>
 
                     </div>
-<form
-    method="post"
-    action="/teacher/students/<?= (int)$student['id'] ?>/schedule/delete"
-    onsubmit="return confirm('Удалить это постоянное занятие?');"
->
 
-    <?= csrf_field() ?>
+                    <form
+                        method="post"
+                        action="/teacher/students/<?= (int)$student['id'] ?>/schedule/delete"
+                        onsubmit="return confirm('Удалить это постоянное занятие?');"
+                    >
 
-    <input
-        type="hidden"
-        name="schedule_id"
-        value="<?= (int)$item['id'] ?>"
-    >
+                        <?= csrf_field() ?>
 
-    <button
-        class="icon-button"
-        type="submit"
-    >
-        ×
-    </button>
+                        <input
+                            type="hidden"
+                            name="schedule_id"
+                            value="<?= (int)$item['id'] ?>"
+                        >
 
-</form>
+                        <button
+                            class="icon-button"
+                            type="submit"
+                            title="Удалить"
+                        >
+                            ×
+                        </button>
+
+                    </form>
+
                 </div>
 
             <?php endforeach; ?>
 
         </div>
 
+    <?php else: ?>
+
+        <p class="empty">
+            Постоянное расписание пока не задано.
+        </p>
+
     <?php endif; ?>
+
+
+    <div class="panel-head space-top">
+
+        <h2>Добавить занятие</h2>
+
+    </div>
+
+
+    <form
+        method="post"
+        action="/teacher/students/<?= (int)$student['id'] ?>/schedule"
+        class="stack-form"
+    >
+
+        <?= csrf_field() ?>
+
+
+        <label class="field">
+
+            <span>День недели</span>
+
+            <select
+                name="weekday"
+                required
+            >
+
+                <option value="">
+                    Выберите день
+                </option>
+
+                <option value="1">
+                    Понедельник
+                </option>
+
+                <option value="2">
+                    Вторник
+                </option>
+
+                <option value="3">
+                    Среда
+                </option>
+
+                <option value="4">
+                    Четверг
+                </option>
+
+                <option value="5">
+                    Пятница
+                </option>
+
+                <option value="6">
+                    Суббота
+                </option>
+
+                <option value="7">
+                    Воскресенье
+                </option>
+
+            </select>
+
+        </label>
+
+
+        <label class="field">
+
+            <span>Время начала</span>
+
+            <input
+                type="time"
+                name="time"
+                step="900"
+                required
+            >
+
+        </label>
+
+
+        <button
+            class="button button-small"
+            type="submit"
+        >
+            Добавить в постоянное расписание
+        </button>
+
+    </form>
 
 </section>
 <section class="panel space-top">

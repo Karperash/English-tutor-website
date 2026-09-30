@@ -24,11 +24,12 @@ final class Lesson
 
     public static function forStudent(int $studentId): array
     {
+        self::syncRecurringForStudent($studentId, 31);
         $stmt = Database::connection()->prepare(
             "SELECT l.* FROM lessons l
              WHERE l.student_id = ?
              ORDER BY l.starts_at DESC
-             LIMIT 200"
+             LIMIT 500"
         );
         $stmt->execute([$studentId]);
         return $stmt->fetchAll();
@@ -36,43 +37,207 @@ final class Lesson
 
     public static function upcomingForStudent(int $studentId, int $limit = 10): array
     {
-        $stmt = Database::connection()->prepare(
-            "SELECT l.* FROM lessons l
-             WHERE l.student_id = ? AND l.status = 'scheduled' AND l.starts_at >= NOW()
-             ORDER BY l.starts_at ASC LIMIT " . (int)$limit
-        );
+        self::syncRecurringForStudent($studentId, 31);
+
+    $stmt = Database::connection()->prepare(
+        "SELECT l.* FROM lessons l
+         WHERE l.student_id = ?
+           AND l.status = 'scheduled'
+           AND l.starts_at >= NOW()
+         ORDER BY l.starts_at ASC
+         LIMIT " . (int)$limit
+    );
         $stmt->execute([$studentId]);
         return $stmt->fetchAll();
     }
 
-    public static function upcomingForTeacher(int $teacherId, int $limit = 20): array
-    {
-        $stmt = Database::connection()->prepare(
-            "SELECT l.*, u.first_name, u.last_name
-             FROM lessons l
-             JOIN users u ON u.id = l.student_id
-             WHERE l.teacher_id = ? AND l.status = 'scheduled' AND l.starts_at >= NOW()
-             ORDER BY l.starts_at ASC LIMIT " . (int)$limit
-        );
-        $stmt->execute([$teacherId]);
-        return $stmt->fetchAll();
-    }
-public static function scheduleForTeacher(int $teacherId, int $days = 60): array
+    public static function upcomingForTeacher(int $teacherId, int $limit = 100): array
 {
+    self::syncRecurringForTeacher($teacherId, 31);
+
     $stmt = Database::connection()->prepare(
         "SELECT l.*, u.first_name, u.last_name
          FROM lessons l
          JOIN users u ON u.id = l.student_id
          WHERE l.teacher_id = ?
            AND l.status = 'scheduled'
+           AND l.starts_at >= NOW()
+           AND l.starts_at < NOW() + INTERVAL 31 DAY
+         ORDER BY l.starts_at ASC
+         LIMIT " . (int)$limit
+    );
+
+    $stmt->execute([$teacherId]);
+
+    return $stmt->fetchAll();
+}
+public static function scheduleForTeacher(int $teacherId, int $days = 31): array
+{
+    self::syncRecurringForTeacher($teacherId, $days);
+
+    $stmt = Database::connection()->prepare(
+        "SELECT l.*, u.first_name, u.last_name
+         FROM lessons l
+         JOIN users u ON u.id = l.student_id
+         WHERE l.teacher_id = ?
            AND l.starts_at >= NOW() - INTERVAL 1 DAY
            AND l.starts_at < NOW() + INTERVAL " . (int)$days . " DAY
+           AND l.status IN ('scheduled', 'completed')
          ORDER BY l.starts_at ASC"
     );
 
     $stmt->execute([$teacherId]);
 
     return $stmt->fetchAll();
+}
+public static function syncRecurringForTeacher(
+    int $teacherId,
+    int $days = 31
+): void {
+    $pdo = Database::connection();
+
+    $rulesStmt = $pdo->prepare(
+        "SELECT
+            id,
+            student_id,
+            weekday,
+            start_time,
+            duration_minutes
+         FROM recurring_lessons
+         WHERE teacher_id = ?
+           AND active = 1
+         ORDER BY weekday, start_time"
+    );
+
+    $rulesStmt->execute([$teacherId]);
+    $rules = $rulesStmt->fetchAll();
+
+    if (!$rules) {
+        return;
+    }
+
+    $now = new DateTimeImmutable();
+
+    $checkStmt = $pdo->prepare(
+        "SELECT id
+         FROM lessons
+         WHERE teacher_id = ?
+           AND student_id = ?
+           AND starts_at = ?
+         LIMIT 1"
+    );
+
+    $collisionStmt = $pdo->prepare(
+        "SELECT id
+         FROM lessons
+         WHERE teacher_id = ?
+           AND status = 'scheduled'
+           AND starts_at < ?
+           AND ends_at > ?
+         LIMIT 1"
+    );
+
+    $insertStmt = $pdo->prepare(
+        "INSERT INTO lessons
+        (
+            student_id,
+            teacher_id,
+            schedule_slot_id,
+            starts_at,
+            ends_at,
+            status,
+            payment_status,
+            booked_at
+        )
+        VALUES (?, ?, NULL, ?, ?, 'scheduled', 'unpaid', NULL)"
+    );
+
+    $startDate = new DateTimeImmutable('today');
+
+    for ($i = 0; $i < $days; $i++) {
+
+        $date = $startDate->modify("+{$i} days");
+
+        $weekday = (int)$date->format('N');
+
+        foreach ($rules as $rule) {
+
+            if ((int)$rule['weekday'] !== $weekday) {
+                continue;
+            }
+
+            $startsAt = new DateTimeImmutable(
+                $date->format('Y-m-d') . ' ' . $rule['start_time']
+            );
+
+            if ($startsAt <= $now) {
+                continue;
+            }
+
+            $duration = max(
+                1,
+                (int)$rule['duration_minutes']
+            );
+
+            $endsAt = $startsAt->modify(
+                '+' . $duration . ' minutes'
+            );
+
+            $startsSql = $startsAt->format('Y-m-d H:i:s');
+            $endsSql = $endsAt->format('Y-m-d H:i:s');
+
+            $checkStmt->execute([
+                $teacherId,
+                (int)$rule['student_id'],
+                $startsSql
+            ]);
+
+            if ($checkStmt->fetchColumn()) {
+                continue;
+            }
+
+            $collisionStmt->execute([
+                $teacherId,
+                $endsSql,
+                $startsSql
+            ]);
+
+            if ($collisionStmt->fetchColumn()) {
+                continue;
+            }
+
+            $insertStmt->execute([
+                (int)$rule['student_id'],
+                $teacherId,
+                $startsSql,
+                $endsSql
+            ]);
+        }
+    }
+}
+
+
+public static function syncRecurringForStudent(
+    int $studentId,
+    int $days = 31
+): void {
+    $pdo = Database::connection();
+
+    $teacherStmt = $pdo->prepare(
+        "SELECT DISTINCT teacher_id
+         FROM recurring_lessons
+         WHERE student_id = ?
+           AND active = 1"
+    );
+
+    $teacherStmt->execute([$studentId]);
+
+    foreach ($teacherStmt->fetchAll(PDO::FETCH_COLUMN) as $teacherId) {
+        self::syncRecurringForTeacher(
+            (int)$teacherId,
+            $days
+        );
+    }
 }
     public static function todayForTeacher(int $teacherId): array
     {

@@ -9,6 +9,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Flash;
 use App\Models\Lesson;
+use App\Models\RecurringLesson;
 use App\Models\User;
 use App\Services\NotificationService;
 use DateTimeImmutable;
@@ -16,15 +17,25 @@ use PDOException;
 
 final class ScheduleController extends Controller
 {
-    public function teacher(): void
+ public function teacher(): void
 {
     $teacher = Auth::requireRole('teacher');
 
-    $lessons = Lesson::scheduleForTeacher((int)$teacher['id']);
+    $lessons = Lesson::scheduleForTeacher(
+        (int)$teacher['id'],
+        60
+    );
+
+    $recurringLessons = RecurringLesson::upcomingForTeacher(
+        (int)$teacher['id'],
+        60
+    );
+
     $students = User::students();
 
     $this->view('teacher/schedule', [
         'lessons' => $lessons,
+        'recurringLessons' => $recurringLessons,
         'students' => $students,
     ]);
 }

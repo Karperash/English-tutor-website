@@ -1,7 +1,7 @@
 <?php $title = 'Главная'; ?>
 <div class="page-head">
     <div><span class="eyebrow">Личный кабинет</span><h1>Здравствуйте, <?= e($user['first_name']) ?>!</h1><p>Здесь собраны занятия, ссылки и домашние задания.</p></div>
-    <a class="button" href="/student/schedule">Записаться на занятие</a>
+    
 </div>
 
 <?php if ($nextLesson): ?>

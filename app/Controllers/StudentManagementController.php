@@ -68,7 +68,6 @@ final class StudentManagementController extends Controller
             'student' => $student,
             'lessons' => Lesson::forStudent((int)$student['id']),
             'notes' => TeacherNote::forStudent((int)$student['id']),
-            'schedule' => RecurringLesson::forStudent((int)$student['id']),
             'schedule' => RecurringLesson::forStudent((int)$student['id'])
         ]);
     }
